@@ -36,6 +36,14 @@ char Lexer:: advance() {
     return c;
 }
 
+// conditional advance, only consume if curr char matches expected
+bool Lexer::match (char expected) {
+    if (is_at_end()) return false;
+    if (source_[current_] != expected) return false;
+    current_++;
+    column_++;
+    return true;
+}
 
 
 } // namespace compiler
