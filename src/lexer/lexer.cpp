@@ -93,5 +93,57 @@ void Lexer::skip_line_comment() {
     }
 }
 
+// Identifiers and keywords
+Token Lexer::identifier() {
+    // Consume all alphanumeric characters and underscores
+    while (!is_at_end() && (std::isalnum(peek()) || peek() == '_')) {
+        advance();
+    }
+    return make_token(identifier_kind());
+}
+
+// Check if the identifier we just scanned is a keyword
+TokenKind Lexer::identifier_kind() {
+    // trie-like approach: check first char, then compare rest
+    // this is faster than a hash table for small keyword sets
+    
+    std::string_view text = source_.substr(start_, current_ - start_);
+    
+    switch (text[0]) {
+        case 'e': if (text == "else") return TokenKind::Else; break;
+        case 'f':
+            if (text == "fn") return TokenKind::Fn;
+            if (text == "false") return TokenKind::False;
+            break;
+        case 'i': if (text == "if") return TokenKind::If; break;
+        case 'l': if (text == "let") return TokenKind::Let; break;
+        case 'r': if (text == "return") return TokenKind::Return; break;
+        case 't': if (text == "true") return TokenKind::True; break;
+        case 'w': if (text == "while") return TokenKind::While; break;
+    }
+    
+    return TokenKind::Identifier;
+}
+
+// Numbers
+Token Lexer::number() {
+    // consume all digits
+    while (!is_at_end() && std::isdigit(peek())) {
+        advance();
+    }
+    
+    // check for decimal point followed by more digits
+    if (peek() == '.' && std::isdigit(peek_next())) {
+        advance();  // consume the '.'
+        
+        while (!is_at_end() && std::isdigit(peek())) {
+            advance();
+        }
+        
+        return make_token(TokenKind::FloatLit);
+    }
+    
+    return make_token(TokenKind::IntLit);
+}
 
 } // namespace compiler
