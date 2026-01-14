@@ -1,6 +1,7 @@
 // Lexer implementation
 
 #include "lexer.hpp"
+#include <cctype>
 
 namespace compiler {
 
@@ -144,6 +145,102 @@ Token Lexer::number() {
     }
     
     return make_token(TokenKind::IntLit);
+}
+
+Token Lexer::string() {
+    // we already consumed open quote, now consume until close quote, or end of input
+    while (!is_at_end() && peek() != '"') {
+        if (peek() == '\n') {
+            line_++;
+            column_ = 1;
+        }
+        advance();
+    }
+
+    if (is_at_end()) {
+        return error_token("Unterminated string");
+    }
+
+    advance(); // consume closing quote
+    return make_token(TokenKind::StringLit);
+}
+
+Token Lexer::next_token() {
+    // peeked a token earlier, return it now
+    if (peeked_.has_value()) {
+        Token t = peeked_.value();
+        peeked_.reset();
+        return t;
+    }
+    
+    skip_whitespace();
+    
+    start_ = current_;  // Mark start of new token
+    
+    if (is_at_end()) {
+        return make_token(TokenKind::Eof);
+    }
+    
+    char c = advance();
+    
+    // identifiers start with letter or underscore
+    if (std::isalpha(c) || c == '_') {
+        return identifier();
+    }
+    
+    // numbers start with digit
+    if (std::isdigit(c)) {
+        return number();
+    }
+    
+    // Everything else
+    switch (c) {
+        // Single-character tokens
+        case '(': return make_token(TokenKind::LParen);
+        case ')': return make_token(TokenKind::RParen);
+        case '{': return make_token(TokenKind::LBrace);
+        case '}': return make_token(TokenKind::RBrace);
+        case '[': return make_token(TokenKind::LBracket);
+        case ']': return make_token(TokenKind::RBracket);
+        case ',': return make_token(TokenKind::Comma);
+        case ';': return make_token(TokenKind::Semicolon);
+        case ':': return make_token(TokenKind::Colon);
+        case '+': return make_token(TokenKind::Plus);
+        case '*': return make_token(TokenKind::Star);
+        
+        // Two-character tokens (need to check second char)
+        case '-':
+            return make_token(match('>') ? TokenKind::Arrow : TokenKind::Minus);
+        case '/':
+            return make_token(TokenKind::Slash);
+        case '=':
+            return make_token(match('=') ? TokenKind::EqualEqual : TokenKind::Equal);
+        case '!':
+            return make_token(match('=') ? TokenKind::BangEqual : TokenKind::Bang);
+        case '<':
+            return make_token(match('=') ? TokenKind::LessEqual : TokenKind::Less);
+        case '>':
+            return make_token(match('=') ? TokenKind::GreaterEqual : TokenKind::Greater);
+        case '&':
+            if (match('&')) return make_token(TokenKind::AmpAmp);
+            return error_token("Expected '&&'");
+        case '|':
+            if (match('|')) return make_token(TokenKind::PipePipe);
+            return error_token("Expected '||'");
+        
+        // String literals
+        case '"':
+            return string();
+    }
+    
+    return error_token("Unexpected character");
+}
+
+Token Lexer::peek_token() {
+    if (!peeked_.has_value()) {
+        peeked_ = next_token();
+    }
+    return peeked_.value();
 }
 
 } // namespace compiler
