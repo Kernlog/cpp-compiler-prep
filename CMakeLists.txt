@@ -28,6 +28,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 # Main compiler library (all components link into this)
 add_library(compiler_lib STATIC
     src/common/error.cpp
+    src/lexer/token.cpp
+    src/lexer/lexer.cpp
 )
 
 # Main executable
