@@ -45,5 +45,53 @@ bool Lexer::match (char expected) {
     return true;
 }
 
+// create token from chars between start_ and current_
+Token Lexer::make_token(TokenKind kind) {
+    std::string_view lexeme = source_.substr(start_, current_ - start_);
+    return Token{kind, lexeme, SourceLocation{filename_, line_, column_}};
+}
+
+// err token and report err
+Token Lexer::error_token(const char* message) {
+    errors_.report(ErrorKind::Lexer, SourceLocation{filename_, line_, column_}, message);
+    return Token{TokenKind::Error, std::string_view{}, SourceLocation{filename_, line_, column_}};
+}
+
+// whitespace and comments
+void Lexer::skip_whitespace() {
+    while (!is_at_end()) {
+        char c = peek();
+        switch (c) {
+            case ' ':
+            case '\t':
+            case '\r':
+                advance();
+                break;
+            case '\n':
+                line_++;
+                column_ = 1;
+                advance();
+                break;
+            case '/':
+                // Check for // comment
+                if (peek_next() == '/') {
+                    skip_line_comment();
+                } else {
+                    return;  // It's a division operator, not a comment
+                }
+                break;
+            default:
+                return;  // Not whitespace, stop skipping
+        }
+    }
+}
+
+void Lexer::skip_line_comment() {
+    // Consume until end of line
+    while (!is_at_end() && peek() != '\n') {
+        advance();
+    }
+}
+
 
 } // namespace compiler
